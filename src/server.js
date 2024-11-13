@@ -1,31 +1,22 @@
 import http from "node:http";
 import { json } from "./middlewares/json.js";
-
-const tasks = [];
+import { routes } from "./routes.js";
 
 const server = http.createServer(async (req, res) => {
 	const { method, url } = req;
 
 	await json(req, res);
 
-	if (method === "GET" && url === "/tasks") {
-		return res
-			.end(JSON.stringify(tasks));
-	}
+	const route = routes.find((route) => {
+		return route.method === method && route.path.test(url);
+	});
 
-	if (method === "POST" && url === "/tasks") {
-		const { title, description } = req.body;
+	if (route) {
+		const routeParams = req.url.match(route.path)
 
-		tasks.push({
-			id: 1,
-			title,
-			description,
-			completed_at: null,
-			created_at: null,
-			updated_at: null,
-		});
+		req.params = { ...routeParams.groups }
 
-		return res.writeHead(201).end("Tarefa Criada!");
+		return route.handler(req, res);
 	}
 
 	return res.writeHead(404).end();
